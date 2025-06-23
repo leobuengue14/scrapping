@@ -98,7 +98,7 @@ class SportingScraper {
         // Try different selectors for price - focusing on the main product price
         let price = '';
         const priceSelectors = [
-          // Main product price selectors
+          // Main product price selectors for Sporting.com.ar
           '.product-price .price',
           '.price-current',
           '[data-testid="product-price"]',
@@ -123,7 +123,12 @@ class SportingScraper {
           '.price-main',
           // Look for price elements that contain currency symbol
           '[class*="price"]:not([class*="shipping"]):not([class*="envio"])',
-          '[class*="Price"]:not([class*="shipping"]):not([class*="envio"])'
+          '[class*="Price"]:not([class*="shipping"]):not([class*="envio"])',
+          // Additional selectors for Sporting
+          '.product-price .price-current',
+          '.price-current .price',
+          '.product-price-current .price',
+          '.current-price .price'
         ];
 
         for (const selector of priceSelectors) {
@@ -145,7 +150,8 @@ class SportingScraper {
           for (const element of allElements) {
             const text = element.textContent.trim();
             // Look for price pattern: $ followed by numbers and possibly dots/commas
-            const priceMatch = text.match(/\$\s*[\d,]+\.?\d*/);
+            // Updated regex to handle Argentine format: $179.999 or $179,999
+            const priceMatch = text.match(/\$\s*[\d.,]+/);
             if (priceMatch && text.length < 50) { // Avoid very long text that might be descriptions
               // Skip if it contains shipping-related words
               if (!text.toLowerCase().includes('envío') && 
@@ -162,7 +168,20 @@ class SportingScraper {
 
         // Clean up price (extract just the numbers)
         if (price) {
-          price = price.replace(/[^\d.,]/g, '').trim();
+          // Remove all non-numeric characters except dots and commas
+          let cleanPrice = price.replace(/[^\d,.]/g, '');
+          
+          // Handle different price formats
+          if (cleanPrice.includes(',')) {
+            // Formato argentino: "179.999" -> "179999"
+            cleanPrice = cleanPrice.replace(/\./g, '').replace(',', '');
+          } else if (cleanPrice.includes('.')) {
+            // Formato US: "179,999" -> "179999"
+            cleanPrice = cleanPrice.replace(/,/g, '');
+          }
+          // Guardar como string numérico completo (sin parseInt)
+          price = cleanPrice;
+          console.log('Cleaned price (numeric):', price);
         }
 
         console.log(`Extracted - Name: ${productName}, Price: ${price}`);
@@ -182,6 +201,64 @@ class SportingScraper {
           url: window.location.href
         };
       });
+
+      // Extract image separately using Puppeteer methods
+      let image = '';
+      const imageSelectors = [
+        'img.product-main-image',
+        '.product-gallery img',
+        'img[data-testid="product-image"]',
+        '.product-image img',
+        '.product-images img',
+        'img[src*="/products/"]',
+        'img[alt*="producto"]',
+        '.swiper-slide-active img',
+        '.slick-active img',
+        'img'
+      ];
+
+      for (const selector of imageSelectors) {
+        try {
+          const element = await page.$(selector);
+          if (element) {
+            const src = await page.evaluate(el => el.src, element);
+            if (src && src.startsWith('http')) {
+              image = src;
+              console.log('Imagen encontrada con selector', selector, ':', image);
+              break;
+            }
+          }
+        } catch (error) {
+          console.log(`Error with selector ${selector}:`, error.message);
+        }
+      }
+
+      if (!image) {
+        // Busca la imagen más grande
+        try {
+          const imgs = await page.$$eval('img', imgs => 
+            imgs.map(img => ({
+              src: img.src, 
+              w: img.naturalWidth || img.width, 
+              h: img.naturalHeight || img.height
+            }))
+          );
+          const bigImg = imgs
+            .filter(i => i.src && i.src.startsWith('http') && i.w > 100 && i.h > 100)
+            .sort((a, b) => (b.w * b.h) - (a.w * a.h))[0];
+          if (bigImg) {
+            image = bigImg.src;
+            console.log('Imagen grande encontrada:', image);
+          } else {
+            console.log('No se encontró imagen principal');
+          }
+        } catch (error) {
+          console.log('Error buscando imagen grande:', error.message);
+        }
+      }
+
+      // Add image to product data
+      productData.image = image;
 
       console.log('Data extraction completed:', productData);
 
