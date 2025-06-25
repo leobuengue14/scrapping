@@ -5,11 +5,7 @@
   "scripts": {
     "build": "cd client && npm install && npm run build",
     "dev": "concurrently \"cd server && npm run dev\" \"cd client && npm start\"",
-    "start": "cd server && npm start",
-    "vercel-build": "cd client && npm install && npm run build"
-  },
-  "devDependencies": {
-    "concurrently": "^8.2.2"
+    "start": "cd server && npm start"
   },
   "engines": {
     "node": ">=18.0.0"
