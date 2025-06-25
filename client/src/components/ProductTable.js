@@ -44,7 +44,7 @@ const ProductTable = ({ products, onDeleteProduct, onDeleteProductGroup }) => {
       currency: 'ARS',
       minimumFractionDigits: 0,
       maximumFractionDigits: 0
-    }).format(numericPrice);
+    }).format(numericPrice);  
   };
 
   const getSourceTypeName = (type, sourceName = '') => {
@@ -57,6 +57,8 @@ const ProductTable = ({ products, onDeleteProduct, onDeleteProductGroup }) => {
           return 'Tienda River';
         case 'dia':
           return 'Supermercado Dia';
+        case 'solofutbol':
+          return 'Solofutbol';
         default:
           return type.charAt(0).toUpperCase() + type.slice(1);
       }
@@ -69,6 +71,8 @@ const ProductTable = ({ products, onDeleteProduct, onDeleteProductGroup }) => {
       return 'Tienda River';
     } else if (sourceName.toLowerCase().includes('dia')) {
       return 'Supermercado Dia';
+    } else if (sourceName.toLowerCase().includes('solofutbol')) {
+      return 'Solofutbol';
     }
     
     return 'Unknown';

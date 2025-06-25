@@ -144,25 +144,12 @@ class SportingScraper {
           }
         }
 
-        // If we still don't have a price, try to find the first price-like text on the page
+        // If we still don't have a price, try to find the first price-like text on the page (avoid concatenated prices)
         if (!price) {
-          const allElements = document.querySelectorAll('*');
-          for (const element of allElements) {
-            const text = element.textContent.trim();
-            // Look for price pattern: $ followed by numbers and possibly dots/commas
-            // Updated regex to handle Argentine format: $179.999 or $179,999
-            const priceMatch = text.match(/\$\s*[\d.,]+/);
-            if (priceMatch && text.length < 50) { // Avoid very long text that might be descriptions
-              // Skip if it contains shipping-related words
-              if (!text.toLowerCase().includes('envío') && 
-                  !text.toLowerCase().includes('shipping') && 
-                  !text.toLowerCase().includes('gratis') &&
-                  !text.toLowerCase().includes('desde')) {
-                price = priceMatch[0];
-                console.log(`Found price in element text: "${price}"`);
-                break;
-              }
-            }
+          const priceMatches = Array.from(document.body.innerText.matchAll(/\$\s*[\d.,]+/g));
+          if (priceMatches && priceMatches.length > 0) {
+            price = priceMatches[0][0]; // Solo el primer match
+            console.log(`Found price in page text: "${price}"`);
           }
         }
 
@@ -170,7 +157,6 @@ class SportingScraper {
         if (price) {
           // Remove all non-numeric characters except dots and commas
           let cleanPrice = price.replace(/[^\d,.]/g, '');
-          
           // Handle different price formats
           if (cleanPrice.includes(',')) {
             // Formato argentino: "179.999" -> "179999"

@@ -160,8 +160,9 @@ class TiendaRiverScraper {
       if (!price || price.trim() === '') {
         const priceText = await page.evaluate(() => {
           const text = document.body.innerText;
-          const priceMatch = text.match(/\$\s*[\d.,]+/);
-          return priceMatch ? priceMatch[0] : '';
+          // Find ALL price-like matches, but only use the first one
+          const priceMatches = text.match(/\$\s*[\d.,]+/g);
+          return priceMatches && priceMatches.length > 0 ? priceMatches[0] : '';
         });
         
         if (priceText) {
