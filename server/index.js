@@ -13,7 +13,7 @@ const PORT = process.env.PORT || 5000;
 // CORS configuration for Vercel
 const corsOptions = {
   origin: process.env.NODE_ENV === 'production' 
-    ? ['https://your-app-name.vercel.app', 'https://your-app-name.vercel.app'] // Replace with your actual domain
+    ? ['https://*.vercel.app', 'https://*.vercel.app'] // Allow all Vercel domains
     : ['http://localhost:3000', 'http://localhost:5001'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -1051,11 +1051,3 @@ app.post('/api/products/:productId/labels', async (req, res) => {
 
 // Export for Vercel
 module.exports = app;
-
-// Only listen if not in Vercel environment
-if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
-  app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-    console.log(`Mode: ${getDataSource() === 'supabase' ? 'Production (Supabase)' : 'Demo (In-memory)'}`);
-  });
-}
