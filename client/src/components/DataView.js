@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronDown, ChevronRight, Trash2 } from 'lucide-react';
+import axios from 'axios';
+import { ChevronDown, ChevronRight, Trash2, ExternalLink, ChevronLeft, ChevronFirst, ChevronLast } from 'lucide-react';
+import { API_BASE_URL } from '../config';
 
 const DataView = ({ onDeleteProduct, onDeleteProductGroup }) => {
   const [data, setData] = useState([]);
@@ -7,6 +9,7 @@ const DataView = ({ onDeleteProduct, onDeleteProductGroup }) => {
   const [expandedProducts, setExpandedProducts] = useState({});
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(5);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     fetchData();
@@ -27,15 +30,11 @@ const DataView = ({ onDeleteProduct, onDeleteProductGroup }) => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const response = await fetch('http://localhost:5001/api/data');
-      if (response.ok) {
-        const result = await response.json();
-        setData(result.data || result);
-      } else {
-        console.error('Failed to fetch data');
-      }
+      const response = await axios.get(`${API_BASE_URL}/data`);
+      setData(response.data);
     } catch (error) {
       console.error('Error fetching data:', error);
+      setError('Error loading data');
     } finally {
       setLoading(false);
     }
@@ -83,23 +82,23 @@ const DataView = ({ onDeleteProduct, onDeleteProductGroup }) => {
     });
   };
 
-  const handleDeleteRecord = async (dataId) => {
+  const handleDeleteDataRecord = async (dataId) => {
     try {
-      await onDeleteProduct(dataId);
-      // Refresh data automatically after deletion
-      setTimeout(() => fetchData(), 500);
+      await axios.delete(`${API_BASE_URL}/data/${dataId}`);
+      fetchData();
     } catch (error) {
-      console.error('Error deleting record:', error);
+      console.error('Error deleting data record:', error);
+      setError('Error deleting data record');
     }
   };
 
-  const handleDeleteGroup = async (productName) => {
+  const handleDeleteDataGroup = async (productName) => {
     try {
-      await onDeleteProductGroup(productName);
-      // Refresh data automatically after deletion
-      setTimeout(() => fetchData(), 500);
+      await axios.delete(`${API_BASE_URL}/data/name/${encodeURIComponent(productName)}`);
+      fetchData();
     } catch (error) {
-      console.error('Error deleting group:', error);
+      console.error('Error deleting data group:', error);
+      setError('Error deleting data group');
     }
   };
 
@@ -196,7 +195,7 @@ const DataView = ({ onDeleteProduct, onDeleteProductGroup }) => {
                   onClick={(e) => {
                     e.stopPropagation();
                     if (window.confirm(`¿Estás seguro de que quieres eliminar todos los datos de "${product.product_name}"?`)) {
-                      handleDeleteGroup(product.product_name);
+                      handleDeleteDataGroup(product.product_name);
                     }
                   }}
                   className="ml-4 p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded"
@@ -247,7 +246,7 @@ const DataView = ({ onDeleteProduct, onDeleteProductGroup }) => {
                               <button
                                 onClick={() => {
                                   if (window.confirm('¿Estás seguro de que quieres eliminar este registro?')) {
-                                    handleDeleteRecord(source.id);
+                                    handleDeleteDataRecord(source.id);
                                   }
                                 }}
                                 className="p-1 text-red-600 hover:text-red-800 hover:bg-red-50 rounded"

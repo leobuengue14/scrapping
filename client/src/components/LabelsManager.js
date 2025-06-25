@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit, Trash2, X, Save } from 'lucide-react';
+import axios from 'axios';
+import { Plus, Edit, Trash2, X, Save, ChevronLeft, ChevronRight, ChevronFirst, ChevronLast } from 'lucide-react';
+import { API_BASE_URL } from '../config';
 
 const LabelsManager = () => {
   const [labels, setLabels] = useState([]);
@@ -14,12 +16,11 @@ const LabelsManager = () => {
   const fetchLabels = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/labels');
-      if (!response.ok) throw new Error('Failed to fetch labels');
-      const data = await response.json();
-      setLabels(data);
-    } catch (err) {
-      setError(err.message);
+      const response = await axios.get(`${API_BASE_URL}/labels`);
+      setLabels(response.data);
+    } catch (error) {
+      console.error('Error fetching labels:', error);
+      setError('Error loading labels');
     } finally {
       setLoading(false);
     }
@@ -29,56 +30,49 @@ const LabelsManager = () => {
     fetchLabels();
   }, []);
 
-  const handleCreateLabel = async (e) => {
-    e.preventDefault();
-    try {
-      const response = await fetch('/api/labels', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newLabel)
-      });
-      
-      if (!response.ok) throw new Error('Failed to create label');
-      
-      await fetchLabels();
-      setNewLabel({ name: '', color: '#3B82F6' });
-      setShowCreateForm(false);
-    } catch (err) {
-      setError(err.message);
-    }
-  };
-
-  const handleUpdateLabel = async (e) => {
-    e.preventDefault();
-    try {
-      const response = await fetch(`/api/labels/${editingLabel.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(editingLabel)
-      });
-      
-      if (!response.ok) throw new Error('Failed to update label');
-      
-      await fetchLabels();
-      setEditingLabel(null);
-    } catch (err) {
-      setError(err.message);
-    }
-  };
-
-  const handleDeleteLabel = async (id) => {
-    if (!window.confirm('¿Estás seguro de que quieres eliminar este label?')) return;
+  const handleCreateLabel = async () => {
+    if (!newLabel.name.trim()) return;
     
     try {
-      const response = await fetch(`/api/labels/${id}`, {
-        method: 'DELETE'
+      const response = await axios.post(`${API_BASE_URL}/labels`, {
+        name: newLabel.name.trim(),
+        color: newLabel.color
       });
-      
-      if (!response.ok) throw new Error('Failed to delete label');
-      
-      await fetchLabels();
-    } catch (err) {
-      setError(err.message);
+      setLabels([response.data, ...labels]);
+      setNewLabel({ name: '', color: '#3B82F6' });
+      setError('');
+    } catch (error) {
+      console.error('Error creating label:', error);
+      setError('Error creating label');
+    }
+  };
+
+  const handleUpdateLabel = async () => {
+    if (!editingLabel || !editingLabel.name.trim()) return;
+    
+    try {
+      const response = await axios.put(`${API_BASE_URL}/labels/${editingLabel.id}`, {
+        name: editingLabel.name.trim(),
+        color: editingLabel.color
+      });
+      setLabels(labels.map(label => 
+        label.id === editingLabel.id ? response.data : label
+      ));
+      setEditingLabel(null);
+      setError('');
+    } catch (error) {
+      console.error('Error updating label:', error);
+      setError('Error updating label');
+    }
+  };
+
+  const handleDeleteLabel = async (labelId) => {
+    try {
+      await axios.delete(`${API_BASE_URL}/labels/${labelId}`);
+      setLabels(labels.filter(label => label.id !== labelId));
+    } catch (error) {
+      console.error('Error deleting label:', error);
+      setError('Error deleting label');
     }
   };
 

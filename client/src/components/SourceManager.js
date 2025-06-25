@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, X, Globe, Link, Unlink } from 'lucide-react';
+import { Plus, X, Globe, Link, Unlink, Trash2, ExternalLink, ChevronLeft, ChevronRight, ChevronFirst, ChevronLast } from 'lucide-react';
 import axios from 'axios';
+import { API_BASE_URL } from '../config';
 
 const SourceManager = ({ onClose, onSourceAdded, selectedProductId, selectedProductName }) => {
   const [formData, setFormData] = useState({
@@ -13,6 +14,7 @@ const SourceManager = ({ onClose, onSourceAdded, selectedProductId, selectedProd
   const [loadingSources, setLoadingSources] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(5);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     fetchSources();
@@ -21,22 +23,14 @@ const SourceManager = ({ onClose, onSourceAdded, selectedProductId, selectedProd
 
   const fetchSources = async () => {
     try {
-      setLoadingSources(true);
-      const response = await fetch('http://localhost:5001/api/sources');
-      if (response.ok) {
-        const data = await response.json();
-        // Si hay un producto seleccionado, filtrar solo las sources vinculadas a ese producto
-        if (selectedProductId) {
-          const filteredSources = data.filter(source => source.product_id === selectedProductId);
-          setSources(filteredSources);
-        } else {
-          setSources(data);
-        }
-      }
+      setLoading(true);
+      const response = await axios.get(`${API_BASE_URL}/sources`);
+      setSources(response.data);
     } catch (error) {
       console.error('Error fetching sources:', error);
+      setError('Error loading sources');
     } finally {
-      setLoadingSources(false);
+      setLoading(false);
     }
   };
 
@@ -62,12 +56,12 @@ const SourceManager = ({ onClose, onSourceAdded, selectedProductId, selectedProd
     setLoading(true);
     try {
       // Add the source
-      const sourceResponse = await axios.post('http://localhost:5001/api/sources', formData);
-      const newSource = sourceResponse.data;
+      const response = await axios.post(`${API_BASE_URL}/sources`, formData);
+      const newSource = response.data;
       
       // If there's a selected product, automatically link the source to it
       if (selectedProductId && newSource.id) {
-        await axios.put(`http://localhost:5001/api/sources/${newSource.id}/link-product`, {
+        await axios.put(`${API_BASE_URL}/sources/${newSource.id}/link-product`, {
           productId: selectedProductId
         });
       }
@@ -95,7 +89,7 @@ const SourceManager = ({ onClose, onSourceAdded, selectedProductId, selectedProd
 
   const handleLinkSource = async (sourceId, productId) => {
     try {
-      const response = await fetch(`http://localhost:5001/api/sources/${sourceId}/link-product`, {
+      const response = await fetch(`${API_BASE_URL}/sources/${sourceId}/link-product`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -117,7 +111,7 @@ const SourceManager = ({ onClose, onSourceAdded, selectedProductId, selectedProd
   const handleDeleteSource = async (sourceId) => {
     if (!window.confirm('¿Estás seguro de que deseas borrar esta source?')) return;
     try {
-      await axios.delete(`http://localhost:5001/api/sources/${sourceId}`);
+      await axios.delete(`${API_BASE_URL}/sources/${sourceId}`);
       fetchSources();
       if (onSourceAdded) onSourceAdded();
     } catch (error) {

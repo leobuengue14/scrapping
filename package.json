@@ -1,19 +1,16 @@
 {
   "name": "web-scraping-app",
   "version": "1.0.0",
-  "description": "A web scraping application for multiple sources",
-  "main": "server/index.js",
+  "description": "Web scraping application with React frontend and Node.js backend",
   "scripts": {
-    "dev": "concurrently \"npm run server\" \"npm run client\"",
-    "server": "cd server && npm run dev",
-    "client": "cd client && npm start",
-    "build": "cd client && npm run build",
-    "install-all": "npm install && cd server && npm install && cd ../client && npm install"
+    "build": "cd client && npm install && npm run build",
+    "dev": "concurrently \"cd server && npm run dev\" \"cd client && npm start\"",
+    "start": "cd server && npm start"
   },
-  "keywords": ["web-scraping", "react", "node", "supabase"],
-  "author": "",
-  "license": "MIT",
   "devDependencies": {
     "concurrently": "^8.2.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 } 

@@ -10,9 +10,24 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// CORS configuration for Vercel
+const corsOptions = {
+  origin: process.env.NODE_ENV === 'production' 
+    ? ['https://your-app-name.vercel.app', 'https://your-app-name.vercel.app'] // Replace with your actual domain
+    : ['http://localhost:3000', 'http://localhost:5001'],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+};
+
 // Middleware
-app.use(cors());
+app.use(cors(corsOptions));
 app.use(express.json());
+
+// Health check endpoint for Vercel
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
 
 // Initialize Supabase client with error handling
 let supabase = null;
@@ -1034,7 +1049,13 @@ app.post('/api/products/:productId/labels', async (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-  console.log(`Mode: ${getDataSource() === 'supabase' ? 'Production (Supabase)' : 'Demo (In-memory)'}`);
-});
+// Export for Vercel
+module.exports = app;
+
+// Only listen if not in Vercel environment
+if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+    console.log(`Mode: ${getDataSource() === 'supabase' ? 'Production (Supabase)' : 'Demo (In-memory)'}`);
+  });
+}

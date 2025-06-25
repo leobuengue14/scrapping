@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+import { Plus, Trash2, ExternalLink, Tag, ChevronLeft, ChevronRight, ChevronFirst, ChevronLast } from 'lucide-react';
 import ProductLabelSelector from './ProductLabelSelector';
+import { API_BASE_URL } from '../config';
 
 const ProductCatalog = ({ onNavigateToSources, onDeleteProduct, onDeleteProductGroup }) => {
   const [products, setProducts] = useState([]);
@@ -18,16 +21,11 @@ const ProductCatalog = ({ onNavigateToSources, onDeleteProduct, onDeleteProductG
   const fetchProducts = async () => {
     try {
       setLoading(true);
-      const response = await fetch('http://localhost:5001/api/product-catalog');
-      if (response.ok) {
-        const data = await response.json();
-        setProducts(data);
-      } else {
-        setError('Error al cargar productos');
-      }
+      const response = await axios.get(`${API_BASE_URL}/products`);
+      setProducts(response.data);
     } catch (error) {
       console.error('Error fetching products:', error);
-      setError('Error al cargar productos');
+      setError('Error loading products');
     } finally {
       setLoading(false);
     }
@@ -41,25 +39,12 @@ const ProductCatalog = ({ onNavigateToSources, onDeleteProduct, onDeleteProductG
     }
 
     try {
-      const response = await fetch('http://localhost:5001/api/product-catalog', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ name: newProductName.trim() }),
-      });
-
-      if (response.ok) {
-        const newProduct = await response.json();
-        setProducts([newProduct, ...products]);
-        setNewProductName('');
-        setShowAddModal(false);
-        setError('');
-        fetchProducts();
-      } else {
-        const errorData = await response.json();
-        setError(errorData.error || 'Error al crear producto');
-      }
+      const response = await axios.post(`${API_BASE_URL}/products`, { name: newProductName.trim() });
+      setProducts([response.data, ...products]);
+      setNewProductName('');
+      setShowAddModal(false);
+      setError('');
+      fetchProducts();
     } catch (error) {
       console.error('Error creating product:', error);
       setError('Error al crear producto');
@@ -72,11 +57,20 @@ const ProductCatalog = ({ onNavigateToSources, onDeleteProduct, onDeleteProductG
     }
 
     try {
-      await onDeleteProduct(productId);
+      await axios.delete(`${API_BASE_URL}/products/${productId}`);
       fetchProducts();
     } catch (error) {
       console.error('Error deleting product:', error);
       setError('Error al eliminar producto');
+    }
+  };
+
+  const handleDeleteProductGroup = async (productName) => {
+    try {
+      await axios.delete(`${API_BASE_URL}/products/name/${encodeURIComponent(productName)}`);
+      fetchProducts();
+    } catch (error) {
+      console.error('Error deleting product group:', error);
     }
   };
 

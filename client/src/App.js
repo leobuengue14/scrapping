@@ -6,6 +6,7 @@ import ProductCatalog from './components/ProductCatalog';
 import ProductSelectionModal from './components/ProductSelectionModal';
 import DataView from './components/DataView';
 import LabelsManager from './components/LabelsManager';
+import { API_BASE_URL, SSE_URL } from './config';
 
 function App() {
   const [products, setProducts] = useState([]);
@@ -41,7 +42,7 @@ function App() {
     let eventSource = null;
 
     const connectSSE = () => {
-      eventSource = new EventSource('http://localhost:5001/api/scraping-updates');
+      eventSource = new EventSource(SSE_URL);
       
       eventSource.onmessage = (event) => {
         try {
@@ -141,7 +142,7 @@ function App() {
   const fetchProducts = async () => {
     try {
       console.log('Fetching products...');
-      const response = await axios.get('http://localhost:5001/api/products');
+      const response = await axios.get(`${API_BASE_URL}/products`);
       console.log('Products fetched:', response.data);
       setProducts(response.data);
     } catch (error) {
@@ -152,7 +153,7 @@ function App() {
   const fetchSources = async () => {
     try {
       console.log('Fetching sources...');
-      const response = await axios.get('http://localhost:5001/api/sources');
+      const response = await axios.get(`${API_BASE_URL}/sources`);
       console.log('Sources fetched:', response.data);
       setSources(response.data);
     } catch (error) {
@@ -162,7 +163,7 @@ function App() {
 
   const handleDeleteProduct = async (productId) => {
     try {
-      await axios.delete(`http://localhost:5001/api/products/${productId}`);
+      await axios.delete(`${API_BASE_URL}/products/${productId}`);
       // Refresh products after deletion
       fetchProducts();
     } catch (error) {
@@ -172,7 +173,7 @@ function App() {
 
   const handleDeleteProductGroup = async (productName) => {
     try {
-      await axios.delete(`http://localhost:5001/api/products/name/${encodeURIComponent(productName)}`);
+      await axios.delete(`${API_BASE_URL}/products/name/${encodeURIComponent(productName)}`);
       // Refresh products after deletion
       fetchProducts();
     } catch (error) {
@@ -183,7 +184,7 @@ function App() {
   // Functions for deleting individual data records
   const handleDeleteDataRecord = async (dataId) => {
     try {
-      await axios.delete(`http://localhost:5001/api/data/${dataId}`);
+      await axios.delete(`${API_BASE_URL}/data/${dataId}`);
       // DataView will handle refreshing its own data
     } catch (error) {
       console.error('Error deleting data record:', error);
@@ -192,7 +193,7 @@ function App() {
 
   const handleDeleteDataGroup = async (productName) => {
     try {
-      await axios.delete(`http://localhost:5001/api/data/name/${encodeURIComponent(productName)}`);
+      await axios.delete(`${API_BASE_URL}/data/name/${encodeURIComponent(productName)}`);
       // DataView will handle refreshing its own data
     } catch (error) {
       console.error('Error deleting data group:', error);
@@ -209,7 +210,7 @@ function App() {
     if (!selectedProductId) return;
     
     try {
-      await axios.put(`http://localhost:5001/api/sources/${sourceId}/link-product`, {
+      await axios.put(`${API_BASE_URL}/sources/${sourceId}/link-product`, {
         productId: selectedProductId
       });
       // Refresh sources to get updated linking status
@@ -223,7 +224,7 @@ function App() {
     if (!selectedProductId) return;
     
     try {
-      await axios.put(`http://localhost:5001/api/sources/${sourceId}/unlink-product`, {
+      await axios.put(`${API_BASE_URL}/sources/${sourceId}/unlink-product`, {
         productId: selectedProductId
       });
       // Refresh sources to get updated linking status
@@ -254,7 +255,7 @@ function App() {
 
   const handleExecuteScraping = async (selectedProductIds) => {
     try {
-      const response = await axios.post('http://localhost:5001/api/execute', {
+      const response = await axios.post(`${API_BASE_URL}/execute`, {
         selectedProductIds: selectedProductIds
       });
       console.log('Scraping executed:', response.data);

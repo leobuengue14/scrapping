@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import { Tag, X, Check } from 'lucide-react';
+import { API_BASE_URL } from '../config';
 
 const ProductLabelSelector = ({ productId, onLabelsChange }) => {
   const [labels, setLabels] = useState([]);
@@ -9,23 +11,19 @@ const ProductLabelSelector = ({ productId, onLabelsChange }) => {
 
   const fetchLabels = async () => {
     try {
-      const response = await fetch('/api/labels');
-      if (!response.ok) throw new Error('Failed to fetch labels');
-      const data = await response.json();
-      setLabels(data);
+      const response = await axios.get(`${API_BASE_URL}/labels`);
+      setLabels(response.data);
     } catch (error) {
       console.error('Error fetching labels:', error);
-    } finally {
-      setLoading(false);
     }
   };
 
   const fetchProductLabels = async () => {
+    if (!productId) return;
+    
     try {
-      const response = await fetch(`/api/products/${productId}/labels`);
-      if (!response.ok) throw new Error('Failed to fetch product labels');
-      const data = await response.json();
-      setSelectedLabels(data);
+      const response = await axios.get(`${API_BASE_URL}/product-labels/${productId}`);
+      setSelectedLabels(response.data.map(pl => pl.label_id));
     } catch (error) {
       console.error('Error fetching product labels:', error);
     }
@@ -38,37 +36,22 @@ const ProductLabelSelector = ({ productId, onLabelsChange }) => {
     }
   }, [productId]);
 
-  const handleLabelToggle = async (label) => {
-    const isSelected = selectedLabels.some(selected => selected.id === label.id);
-    let newSelectedLabels;
-
-    if (isSelected) {
-      newSelectedLabels = selectedLabels.filter(selected => selected.id !== label.id);
-    } else {
-      newSelectedLabels = [...selectedLabels, label];
-    }
-
-    setSelectedLabels(newSelectedLabels);
-
-    // Update in backend
+  const handleLabelToggle = async (labelId) => {
     try {
-      const response = await fetch(`/api/products/${productId}/labels`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          labelIds: newSelectedLabels.map(label => label.id)
-        })
-      });
-
-      if (!response.ok) throw new Error('Failed to update product labels');
-      
-      if (onLabelsChange) {
-        onLabelsChange(newSelectedLabels);
+      if (selectedLabels.includes(labelId)) {
+        // Remove label
+        await axios.delete(`${API_BASE_URL}/product-labels/${productId}/${labelId}`);
+        setSelectedLabels(selectedLabels.filter(id => id !== labelId));
+      } else {
+        // Add label
+        await axios.post(`${API_BASE_URL}/product-labels`, {
+          product_id: productId,
+          label_id: labelId
+        });
+        setSelectedLabels([...selectedLabels, labelId]);
       }
     } catch (error) {
-      console.error('Error updating product labels:', error);
-      // Revert on error
-      setSelectedLabels(selectedLabels);
+      console.error('Error toggling label:', error);
     }
   };
 
@@ -77,12 +60,9 @@ const ProductLabelSelector = ({ productId, onLabelsChange }) => {
     setSelectedLabels(newSelectedLabels);
 
     try {
-      const response = await fetch(`/api/products/${productId}/labels`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          labelIds: newSelectedLabels.map(label => label.id)
-        })
+      const response = await axios.post(`${API_BASE_URL}/product-labels`, {
+        product_id: productId,
+        label_id: labelToRemove.id
       });
 
       if (!response.ok) throw new Error('Failed to update product labels');
@@ -148,7 +128,7 @@ const ProductLabelSelector = ({ productId, onLabelsChange }) => {
               return (
                 <button
                   key={label.id}
-                  onClick={() => handleLabelToggle(label)}
+                  onClick={() => handleLabelToggle(label.id)}
                   className={`w-full flex items-center gap-3 px-2 py-2 rounded-md hover:bg-gray-50 transition-colors ${
                     isSelected ? 'bg-blue-50' : ''
                   }`}
