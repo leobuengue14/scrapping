@@ -1,0 +1,15 @@
+node_modules
+.git
+.gitignore
+README.md
+.env
+.env.local
+.env.example
+*.log
+.DS_Store
+.vscode
+.idea
+coverage
+.nyc_output
+debug-*.png
+server/debug-*.png 
