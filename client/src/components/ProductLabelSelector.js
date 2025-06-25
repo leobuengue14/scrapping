@@ -9,49 +9,43 @@ const ProductLabelSelector = ({ productId, onLabelsChange }) => {
   const [loading, setLoading] = useState(true);
   const [showDropdown, setShowDropdown] = useState(false);
 
-  const fetchLabels = async () => {
+  const fetchLabelsAndProductLabels = async () => {
+    setLoading(true);
     try {
-      const response = await axios.get(`${API_BASE_URL}/labels`);
-      setLabels(response.data);
+      const [labelsRes, productLabelsRes] = await Promise.all([
+        axios.get(`${API_BASE_URL}/labels`),
+        productId ? axios.get(`${API_BASE_URL}/products/${productId}/labels`) : Promise.resolve({ data: [] })
+      ]);
+      setLabels(labelsRes.data);
+      // productLabelsRes.data es un array de labels completos
+      setSelectedLabels(productLabelsRes.data);
     } catch (error) {
       console.error('Error fetching labels:', error);
-    }
-  };
-
-  const fetchProductLabels = async () => {
-    if (!productId) return;
-    
-    try {
-      const response = await axios.get(`${API_BASE_URL}/product-labels/${productId}`);
-      setSelectedLabels(response.data.map(pl => pl.label_id));
-    } catch (error) {
-      console.error('Error fetching product labels:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchLabels();
-    if (productId) {
-      fetchProductLabels();
-    }
+    fetchLabelsAndProductLabels();
+    // eslint-disable-next-line
   }, [productId]);
 
   const handleLabelToggle = async (labelId) => {
+    let newSelectedLabels;
+    if (selectedLabels.some(l => l.id === labelId)) {
+      newSelectedLabels = selectedLabels.filter(l => l.id !== labelId);
+    } else {
+      const labelObj = labels.find(l => l.id === labelId);
+      newSelectedLabels = [...selectedLabels, labelObj];
+    }
+    setSelectedLabels(newSelectedLabels);
     try {
-      if (selectedLabels.includes(labelId)) {
-        // Remove label
-        await axios.delete(`${API_BASE_URL}/product-labels/${productId}/${labelId}`);
-        setSelectedLabels(selectedLabels.filter(id => id !== labelId));
-      } else {
-        // Add label
-        await axios.post(`${API_BASE_URL}/product-labels`, {
-          product_id: productId,
-          label_id: labelId
-        });
-        setSelectedLabels([...selectedLabels, labelId]);
-      }
+      await axios.post(`${API_BASE_URL}/products/${productId}/labels`, { labelIds: newSelectedLabels.map(l => l.id) });
+      if (onLabelsChange) onLabelsChange(newSelectedLabels);
     } catch (error) {
-      console.error('Error toggling label:', error);
+      console.error('Error updating product labels:', error);
+      setSelectedLabels(selectedLabels);
     }
   };
 

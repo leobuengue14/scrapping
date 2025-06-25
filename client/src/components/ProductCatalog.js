@@ -21,7 +21,7 @@ const ProductCatalog = ({ onNavigateToSources, onDeleteProduct, onDeleteProductG
   const fetchProducts = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${API_BASE_URL}/products`);
+      const response = await axios.get(`${API_BASE_URL}/product-catalog`);
       setProducts(response.data);
     } catch (error) {
       console.error('Error fetching products:', error);
@@ -39,7 +39,7 @@ const ProductCatalog = ({ onNavigateToSources, onDeleteProduct, onDeleteProductG
     }
 
     try {
-      const response = await axios.post(`${API_BASE_URL}/products`, { name: newProductName.trim() });
+      const response = await axios.post(`${API_BASE_URL}/product-catalog`, { name: newProductName.trim() });
       setProducts([response.data, ...products]);
       setNewProductName('');
       setShowAddModal(false);
@@ -57,7 +57,7 @@ const ProductCatalog = ({ onNavigateToSources, onDeleteProduct, onDeleteProductG
     }
 
     try {
-      await axios.delete(`${API_BASE_URL}/products/${productId}`);
+      await axios.delete(`${API_BASE_URL}/product-catalog/${productId}`);
       fetchProducts();
     } catch (error) {
       console.error('Error deleting product:', error);
@@ -67,7 +67,7 @@ const ProductCatalog = ({ onNavigateToSources, onDeleteProduct, onDeleteProductG
 
   const handleDeleteProductGroup = async (productName) => {
     try {
-      await axios.delete(`${API_BASE_URL}/products/name/${encodeURIComponent(productName)}`);
+      await axios.delete(`${API_BASE_URL}/product-catalog/name/${encodeURIComponent(productName)}`);
       fetchProducts();
     } catch (error) {
       console.error('Error deleting product group:', error);

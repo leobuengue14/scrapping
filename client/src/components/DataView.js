@@ -31,7 +31,7 @@ const DataView = ({ onDeleteProduct, onDeleteProductGroup }) => {
     try {
       setLoading(true);
       const response = await axios.get(`${API_BASE_URL}/data`);
-      setData(response.data);
+      setData(response.data.data);
     } catch (error) {
       console.error('Error fetching data:', error);
       setError('Error loading data');

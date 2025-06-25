@@ -48,26 +48,16 @@ try {
   console.log('Failed to initialize Supabase client, running in demo mode');
 }
 
-// Function to create data table
+// Function to check if data table exists (without inserting test record)
 async function createDataTable() {
   try {
     console.log('Ensuring data table exists...');
-    
-    // Try to insert a test record to see if table exists
-    const testRecord = {
-      product_id: '00000000-0000-0000-0000-000000000000',
-      source_id: '00000000-0000-0000-0000-000000000000',
-      name: 'test',
-      price: '0',
-      url: 'test',
-      scraped_at: new Date().toISOString()
-    };
-    
-    const { error: insertError } = await supabase
+    // Check if the table exists by fetching its structure
+    const { error } = await supabase
       .from('data')
-      .insert([testRecord]);
-    
-    if (insertError && insertError.code === 'PGRST204') {
+      .select('*')
+      .limit(1);
+    if (error && error.code === 'PGRST204') {
       console.log('Data table does not exist. Please create it manually with:');
       console.log(`
         CREATE TABLE IF NOT EXISTS data (
@@ -82,15 +72,10 @@ async function createDataTable() {
             created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
         );
       `);
-    } else if (insertError) {
-      console.log('Data table exists but has different structure:', insertError);
+    } else if (error) {
+      console.log('Data table exists but has different structure:', error);
     } else {
       console.log('Data table exists and is working correctly');
-      // Delete the test record
-      await supabase
-        .from('data')
-        .delete()
-        .eq('name', 'test');
     }
   } catch (error) {
     console.log('Data table check completed with error:', error.message);
@@ -127,9 +112,9 @@ app.get('/api/products', async (req, res) => {
   try {
     if (getDataSource() === 'supabase') {
       const { data, error } = await supabase
-        .from('products')
+        .from('product_catalog')
         .select('*')
-        .order('scraped_at', { ascending: false });
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
       res.json(data);
@@ -254,19 +239,16 @@ app.delete('/api/sources/all', async (req, res) => {
 app.delete('/api/products/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    
     if (getDataSource() === 'supabase') {
       const { error } = await supabase
-        .from('products')
+        .from('product_catalog')
         .delete()
         .eq('id', id);
-
       if (error) throw error;
     } else {
       // Demo mode - remove from memory
       demoProducts = demoProducts.filter(product => product.id !== id);
     }
-    
     res.json({ message: 'Product deleted successfully' });
   } catch (error) {
     console.error('Error deleting product:', error);
@@ -279,34 +261,27 @@ app.delete('/api/products/name/:productName', async (req, res) => {
   try {
     const { productName } = req.params;
     const decodedProductName = decodeURIComponent(productName);
-    
     console.log('Delete request for product name:', decodedProductName);
-    
     if (getDataSource() === 'supabase') {
       // First, let's check how many records exist with this name
       const { data: existingProducts, error: checkError } = await supabase
-        .from('products')
+        .from('product_catalog')
         .select('*')
         .eq('name', decodedProductName);
-      
       if (checkError) {
         console.error('Error checking existing products:', checkError);
         throw checkError;
       }
-      
       console.log(`Found ${existingProducts.length} products with name: "${decodedProductName}"`);
-      
       // Now delete the products
       const { error } = await supabase
-        .from('products')
+        .from('product_catalog')
         .delete()
         .eq('name', decodedProductName);
-
       if (error) {
         console.error('Error deleting products:', error);
         throw error;
       }
-      
       console.log(`Successfully deleted ${existingProducts.length} products`);
     } else {
       // Demo mode - remove from memory
@@ -315,7 +290,6 @@ app.delete('/api/products/name/:productName', async (req, res) => {
       const afterCount = demoProducts.length;
       console.log(`Demo mode: deleted ${beforeCount - afterCount} products`);
     }
-    
     res.json({ message: `All records for "${decodedProductName}" deleted successfully` });
   } catch (error) {
     console.error('Error deleting products by name:', error);
@@ -527,55 +501,28 @@ const sendScrapingUpdate = (update) => {
 // Product Catalog endpoints
 app.get('/api/product-catalog', async (req, res) => {
   try {
-    if (getDataSource() === 'supabase') {
-      const { data, error } = await supabase
-        .from('product_catalog')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      res.json(data);
-    } else {
-      // Demo mode - return in-memory data
-      res.json([]);
-    }
+    const { data, error } = await supabase
+      .from('product_catalog')
+      .select('*')
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    res.json(data);
   } catch (error) {
-    console.error('Error fetching product catalog:', error);
-    res.status(500).json({ error: 'Failed to fetch product catalog' });
+    console.error('Error fetching product_catalog:', error);
+    res.status(500).json({ error: 'Failed to fetch product_catalog' });
   }
 });
 
 app.post('/api/product-catalog', async (req, res) => {
   try {
     const { name } = req.body;
-    
-    if (!name || name.trim() === '') {
-      return res.status(400).json({ error: 'Product name is required' });
-    }
-
-    if (getDataSource() === 'supabase') {
-      const { data, error } = await supabase
-        .from('product_catalog')
-        .insert([{ name: name.trim() }])
-        .select();
-
-      if (error) {
-        if (error.code === '23505') { // Unique constraint violation
-          return res.status(400).json({ error: 'A product with this name already exists' });
-        }
-        throw error;
-      }
-      res.json(data[0]);
-    } else {
-      // Demo mode
-      const newProduct = { 
-        id: uuidv4(), 
-        name: name.trim(), 
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      };
-      res.json(newProduct);
-    }
+    if (!name) return res.status(400).json({ error: 'Name is required' });
+    const { data, error } = await supabase
+      .from('product_catalog')
+      .insert([{ name }])
+      .select();
+    if (error) throw error;
+    res.status(201).json(data[0]);
   } catch (error) {
     console.error('Error creating product:', error);
     res.status(500).json({ error: 'Failed to create product' });
@@ -585,17 +532,12 @@ app.post('/api/product-catalog', async (req, res) => {
 app.delete('/api/product-catalog/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    
-    if (getDataSource() === 'supabase') {
-      const { error } = await supabase
-        .from('product_catalog')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
-    }
-    
-    res.json({ message: 'Product deleted successfully' });
+    const { error } = await supabase
+      .from('product_catalog')
+      .delete()
+      .eq('id', id);
+    if (error) throw error;
+    res.status(204).end();
   } catch (error) {
     console.error('Error deleting product:', error);
     res.status(500).json({ error: 'Failed to delete product' });
@@ -1049,5 +991,10 @@ app.post('/api/products/:productId/labels', async (req, res) => {
   }
 });
 
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`Server listening on port ${PORT}`);
+  });
+}
 // Export for Vercel
 module.exports = app;
